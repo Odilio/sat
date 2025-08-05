@@ -1,0 +1,44 @@
+name: Static HTML Deploy via gh-pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositório
+        uses: actions/checkout@v4
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Criar branch gh-pages com conteúdo
+        run: |
+          git switch --orphan gh-pages
+          git reset --hard
+          git rm -rf .
+          cp -r * .[^.]* ../ 2>/dev/null || true
+          git clean -fdx
+          mv ../index.html .
+          mv ../style.css .
+          mv ../script.js .
+          touch .nojekyll
+          git add .
+          git commit -m "Deploy para GitHub Pages"
+          git push --force origin gh-pages
+
+      - name: Configurar GitHub Pages via API
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          event-type: configure-pages
+
+      - name: Finalizado
+        run: echo "Deploy feito na branch gh-pages!"
